@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Object Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .video-section {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #videoFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+        }
+        
+        .fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.detect {
+            background: #4CAF50;
+        }
+        
+        .btn.continuous {
+            background: #FF9800;
+        }
+        
+        .btn.continuous.active {
+            background: #f44336;
+        }
+        
+        .btn.screenshot {
+            background: #9C27B0;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .panel h3 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: #2196F3;
+        }
+        
+        .filter-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-btn {
+            background: #2a2a2a;
+            border: 2px solid transparent;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .filter-btn:hover {
+            background: #3a3a3a;
+        }
+        
+        .filter-btn.active {
+            border-color: #2196F3;
+            background: #2196F3;
+        }
+        
+        .detection-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .detection-item {
+            background: #2a2a2a;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .detection-name {
+            font-weight: 500;
+        }
+        
+        .detection-confidence {
+            background: #4CAF50;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .history-item {
+            background: #2a2a2a;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        
+        .category-chart {
+            margin-top: 15px;
+        }
+        
+        .chart-bar {
+            background: #2a2a2a;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .chart-label {
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .chart-fill {
+            height: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Real-time Object Detection</h1>
+            <p class="subtitle">Powered by YOLOv8 - Detect furniture, electronics, and more!</p>
+        </header>
+        
+        <div class="main-grid">
+            <div class="video-section">
+                <div class="video-container">
+                    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Video Feed">
+                    <div class="fps-counter">
+                        FPS: <span id="fpsValue">0</span>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn detect" onclick="detectOnce()">
+                        <span>🔍</span> Detect Once
+                    </button>
+                    <button class="btn continuous" id="continuousBtn" onclick="toggleContinuous()">
+                        <span>🔄</span> <span id="continuousText">Start Continuous</span>
+                    </button>
+                    <button class="btn screenshot" onclick="saveScreenshot()">
+                        <span>📸</span> Screenshot
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>🎯 Category Filter</h3>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" onclick="setFilter('all')">All</button>
+                        <button class="filter-btn" onclick="setFilter('Furniture')">🪑 Furniture</button>
+                        <button class="filter-btn" onclick="setFilter('Electronics')">💻 Electronics</button>
+                        <button class="filter-btn" onclick="setFilter('Kitchen')">🍴 Kitchen</button>
+                        <button class="filter-btn" onclick="setFilter('Office/Decor')">📚 Office</button>
+                        <button class="filter-btn" onclick="setFilter('Living')">👤 Living</button>
+                    </div>
+                    
+                    <div class="category-chart" id="categoryChart"></div>
+                </div>
+                
+                <div class="panel">
+                    <h3>🎯 Current Detections</h3>
+                    <div class="detection-list" id="detectionList">
+                        <p style="opacity: 0.5; text-align: center;">No detections yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="panel">
+                <h3>📊 Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalDetections">0</div>
+                        <div class="stat-label">Total Detections</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="currentCount">0</div>
+                        <div class="stat-label">Current Frame</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📜 Detection History</h3>
+                <div class="history-list" id="historyList">
+                    <p style="opacity: 0.5; text-align: center;">No history yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let continuousMode = false;
+        let currentFilter = 'all';
+        let updateInterval;
+        
+        const categoryColors = {
+            'Furniture': '#4CAF50',
+            'Electronics': '#2196F3',
+            'Kitchen': '#FFEB3B',
+            'Office/Decor': '#9C27B0',
+            'Living': '#FF9800'
+        };
+        
+        function detectOnce() {
+            fetch('/detect', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Detection triggered');
+                    setTimeout(updateDetections, 500);
+                });
+        }
+        
+        function toggleContinuous() {
+            fetch('/toggle_continuous', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    continuousMode = data.continuous;
+                    const btn = document.getElementById('continuousBtn');
+                    const text = document.getElementById('continuousText');
+                    
+                    if (continuousMode) {
+                        btn.classList.add('active');
+                        text.textContent = 'Stop Continuous';
+                        startContinuousUpdate();
+                    } else {
+                        btn.classList.remove('active');
+                        text.textContent = 'Start Continuous';
+                        stopContinuousUpdate();
+                    }
+                });
+        }
+        
+        function setFilter(category) {
+            currentFilter = category;
+            
+            // Update UI
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Send to backend
+            fetch(`/set_filter/${category}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Filter set:', data.filter);
+                    updateDetections();
+                });
+        }
+        
+        function saveScreenshot() {
+            fetch('/save_screenshot', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.filename) {
+                        alert(`Screenshot saved: ${data.filename}`);
+                    } else {
+                        alert('Failed to save screenshot');
+                    }
+                });
+        }
+        
+        function updateDetections() {
+            fetch('/get_detections')
+                .then(response => response.json())
+                .then(data => {
+                    // Update FPS
+                    document.getElementById('fpsValue').textContent = Math.round(data.stats.fps);
+                    
+                    // Update detection list
+                    const detectionList = document.getElementById('detectionList');
+                    if (data.detections.length > 0) {
+                        detectionList.innerHTML = data.detections.map(item => `
+                            <div class="detection-item">
+                                <div>
+                                    <span class="detection-name">${item.name}</span>
+                                    <span class="category-badge" style="background: ${item.color}">
+                                        ${item.category}
+                                    </span>
+                                </div>
+                                <span class="detection-confidence">${item.confidence}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        detectionList.innerHTML = '<p style="opacity: 0.5; text-align: center;">No detections</p>';
+                    }
+                    
+                    // Update stats
+                    document.getElementById('totalDetections').textContent = data.stats.total_detections;
+                    document.getElementById('currentCount').textContent = data.detections.length;
+                    
+                    // Update category chart
+                    updateCategoryChart(data.category_counts);
+                    
+                    // Update history
+                    updateHistory(data.stats.detection_history);
+                });
+        }
+        
+        function updateCategoryChart(counts) {
+            const chartDiv = document.getElementById('categoryChart');
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+            
+            if (total === 0) {
+                chartDiv.innerHTML = '';
+                return;
+            }
+            
+            chartDiv.innerHTML = Object.entries(counts).map(([category, count]) => {
+                const percentage = (count / total) * 100;
+                return `
+                    <div class="chart-bar">
+                        <div class="chart-label">${category}: ${count}</div>
+                        <div class="chart-fill" style="width: ${percentage}%; background: ${categoryColors[category]}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateHistory(history) {
+            const historyList = document.getElementById('historyList');
+            if (history && history.length > 0) {
+                historyList.innerHTML = history.reverse().map(entry => `
+                    <div class="history-item">
+                        <strong>${entry.timestamp}</strong> - ${entry.count} items
+                        <br><small>${entry.items.join(', ')}</small>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function startContinuousUpdate() {
+            updateInterval = setInterval(updateDetections, 1000);
+        }
+        
+        function stopContinuousUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        }
+        
+        // Initial update
+        updateDetections();
+        
+        // Update every 2 seconds when not in continuous mode
+        setInterval(() => {
+            if (!continuousMode) {
+                updateDetections();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

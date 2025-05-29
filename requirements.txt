@@ -1,0 +1,30 @@
+# Core Dependencies
+flask==3.0.0
+werkzeug==3.0.1
+ultralytics==8.3.0
+opencv-python==4.8.1.78
+
+# PyTorch (choose based on your system)
+# For CPU only:
+torch==2.1.0
+torchvision==0.16.0
+
+# For CUDA (GPU) - uncomment if you have NVIDIA GPU:
+# torch==2.1.0+cu118
+# torchvision==0.16.0+cu118
+
+# Additional dependencies
+numpy>=1.24.0
+Pillow>=10.0.0
+matplotlib>=3.7.0
+pandas>=2.0.0
+tqdm>=4.65.0
+scipy>=1.10.0
+psutil>=5.9.0
+py-cpuinfo>=9.0.0
+seaborn>=0.12.0
+
+# Optional dependencies for enhanced features
+# websocket-client>=1.6.0  # For real-time WebSocket support
+# redis>=5.0.0  # For caching and session management
+# celery>=5.3.0  # For background task processing
